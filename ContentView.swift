@@ -2,8 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var expenses: [Expense] = []
-    @State private var selectedCategory: String = "All"  // ✅ Filter by category
-    @State private var sortOrder: SortOrder = .byName     // ✅ Sort order
+    @State private var selectedCategory: String = "All"  // Filter by category
+    @State private var sortOrder: SortOrder = .byName     //  Sort order
 
     enum SortOrder {
         case byName, byAmount
@@ -12,7 +12,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // ✅ Filter and Sort Controls
+                // Filter and Sort Controls
                 HStack {
                     Picker("Category", selection: $selectedCategory) {
                         Text("All").tag("All")
@@ -63,7 +63,7 @@ struct ContentView: View {
         .onAppear(perform: loadExpenses)
     }
 
-    // ✅ Computed property to filter and sort
+    // Computed property to filter and sort
     var filteredAndSortedExpenses: [Expense] {
         var filtered = expenses
 
@@ -81,26 +81,26 @@ struct ContentView: View {
         }
     }
 
-    // ✅ Add Expense and Save
+    // Add Expense and Save
     func addExpense(_ expense: Expense) {
         expenses.append(expense)
         saveExpenses()
     }
 
-    // ✅ Delete Expense and Save
+    // Delete Expense and Save
     func deleteExpense(at offsets: IndexSet) {
         expenses.remove(atOffsets: offsets)
         saveExpenses()
     }
 
-    // ✅ Save expenses to UserDefaults
+    // Save expenses to UserDefaults
     func saveExpenses() {
         if let encoded = try? JSONEncoder().encode(expenses) {
             UserDefaults.standard.set(encoded, forKey: "SavedExpenses")
         }
     }
 
-    // ✅ Load expenses from UserDefaults
+    // Load expenses from UserDefaults
     func loadExpenses() {
         if let savedData = UserDefaults.standard.data(forKey: "SavedExpenses"),
            let decoded = try? JSONDecoder().decode([Expense].self, from: savedData) {
