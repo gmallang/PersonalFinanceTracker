@@ -2,81 +2,102 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var items: [Item] = []
+    @State private var showingAddView = false
     @State private var selectedCategory = "All"
-    @State private var sortOrder: SortOrder = .byDate
+    @State private var sortOrder: SortOrder = .Date
     
     enum SortOrder: String, CaseIterable {
-        case byName, byAmount, byDate
+        case Name, Amount, Date
     }
     
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                Section("Filters") {
                     Picker("Category", selection: $selectedCategory) {
                         Text("All").tag("All")
-                        Text("Food").tag("Food")
-                        Text("Entertainment").tag("Entertainment")
-                        Text("Transport").tag("Transport")
-                        Text("Other").tag("Other")
+                        ForEach(["Food", "Entertainment", "Transport", "Other"], id: \.self) {
+                            Text($0).tag($0)
+                        }
                     }
                     
                     Picker("Sort By", selection: $sortOrder) {
-                        ForEach(SortOrder.allCases, id: \.self) { order in
-                            Text(order.rawValue.capitalized).tag(order)
+                        ForEach(SortOrder.allCases, id: \.self) {
+                            Text($0.rawValue.capitalized).tag($0)
                         }
                     }
-                    .pickerStyle(.segmented)
                 }
                 
-                ForEach(filteredAndSortedItems) { item in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(item.name)
-                                .font(.headline)
-                            Text(item.category)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)  // Fixed from 'fore' to 'foregroundColor'
+                // --- Items List Section ---
+                Section("Expenses") {
+                    ForEach(filteredAndSortedItems) { item in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(item.name).font(.headline)
+                                Text(item.category)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                            Spacer()
+                            Text(item.amount, format: .currency(code: "USD"))
+                                // Add a subtle style to the amount based on its value
+                                .foregroundColor(amountColor(for: item.amount))
                         }
-                        Spacer()
-                        Text("$\(item.amount, specifier: "%.2f")")
-                            .font(.body.monospacedDigit())
                     }
+                    .onDelete(perform: deleteItems)
                 }
-                .onDelete(perform: deleteItems)
             }
             .navigationTitle("Expenses")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button {
-                        // Add action here
+                        showingAddView = true
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-        }
-        .onAppear {
-            items = DataManager.loadItems()
+            // THIS IS WHERE AddExpenseView IS CALLED
+            .sheet(isPresented: $showingAddView) {
+                AddExpenseView { newItem in
+                    items.append(newItem)
+                    Expenses.saveItems(items) // Save the updated array
+                }
+            }
+            .onAppear {
+                items = Expenses.loadItems() // Load saved items when the view appears
+            }
         }
     }
     
+    // MARK: - Computed Properties and Methods
+    
     private var filteredAndSortedItems: [Item] {
-        var filtered = items
-        
-        if selectedCategory != "All" {
-            filtered = items.filter { $0.category == selectedCategory }
-        }
+        var filtered = selectedCategory == "All" ? items : items.filter { $0.category == selectedCategory }
         
         switch sortOrder {
-        case .byName: return filtered.sorted { $0.name < $1.name }
-        case .byAmount: return filtered.sorted { $0.amount < $1.amount }
-        case .byDate: return filtered.sorted { $0.date > $1.date }
+        case .Name: filtered.sort { $0.name < $1.name }
+        case .Amount: filtered.sort { $0.amount < $1.amount }
+        case .Date: filtered.sort { $0.date > $1.date }
         }
+        return filtered
     }
     
     private func deleteItems(at offsets: IndexSet) {
         items.remove(atOffsets: offsets)
-        DataManager.saveItems(items)
+        Expenses.saveItems(items) // Save the updated array
+    }
+    
+    private func amountColor(for amount: Double) -> Color {
+        if amount > 100 {
+            return .red
+        } else if amount > 50 {
+            return .orange
+        } else {
+            return .primary
+        }
     }
 }
